@@ -1,6 +1,6 @@
 const dotenv = require('dotenv')
 const express = require('express')
-
+const cors = require('cors')
 const connectDB = require ('./config/db')
 dotenv.config()
 connectDB()
@@ -14,6 +14,7 @@ const registerRoute = require('./routes/registrationRoute')
 const app = express()
 
 //middleware
+app.use(cors())
 app.use(express.json())
 
 //routes
