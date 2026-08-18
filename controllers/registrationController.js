@@ -8,6 +8,31 @@ const registerEvent = async(req,res)=>{
     try{
          const userId = req.user.id
          const {eventId} = req.body
+    const event = await Event.findById(eventId)
+    if(!event){
+        return res.status(404).json({
+            success:false,
+            message:"No such event found or No seats available!!"
+        })
+    }
+if (event.date <= new Date()) {
+  return res.status(400).json({
+    success:false,
+    message:"Registration is closed.The event date has already passed."
+  })
+}
+if (event.date <= new Date()) {
+  return res.status(400).json({
+    success:false,
+    message:"Registration is closed.The event date has already passed."
+  })
+}
+if (event.availableSeats <= 0) {
+    return res.status(400).json({
+    success:false,
+    message:"No seats available!"
+    })
+    }
         const alreadyRegister = await Registration.findOne({
         user:userId,
         event:eventId
@@ -18,20 +43,15 @@ const registerEvent = async(req,res)=>{
             message:"Already registered for this Event!"
         })
     }
-   
-    const event = await Event.findOneAndUpdate(
+
+    event = await Event.findOneAndUpdate(
         {_id:eventId,
         availableSeats:{$gt:0}},
         {$inc:{availableSeats:-1}},{
-            new:true
+            returnDocument:'after'
         }
     )
-    if(!event){
-        return res.status(404).json({
-            success:false,
-            message:"No such event found or No seats available!!"
-        })
-    } 
+   
 
    
     const registration = await Registration.create({
@@ -42,7 +62,7 @@ const registerEvent = async(req,res)=>{
 
     res.status(201).json({
         success:true,
-        message:"Registered successfully!!"
+        message:"Event Registered successfully!!"
        
     })
 
@@ -58,7 +78,7 @@ const registerEvent = async(req,res)=>{
 const getAllRegistration = async(req,res)=>{
     const userId = req.user.id
     const register = await Registration.find({user:userId})
-    .populate('event')
+
     if(register.length===0){
         return res.status(200).json({
             success:true,
@@ -75,38 +95,48 @@ const getAllRegistration = async(req,res)=>{
 
 
 //3.cancel my registered event.
-const cancelEvent = async(req,res)=>{
-    try{
+const cancelEvent = async (req, res) => {
+  try {
     const userId = req.user.id;
-    const {eventId} = req.params
-    const registration = await Registration.findOne({user:userId,event:eventId})
-    if(!registration){
-        return res.status(404).json({
-            success:false,
-            message:"No such registration exists!"
-        })
-    }
-    await Registration.findOneAndDelete({
-        user:userId,
-        event:eventId
-    })
-    const event = await Event.findOneAndUpdate(
-        {_id:eventId},
-        {$inc:{availableSeats:1}},{
-        new:true
-        }
-    )
-    res.status(200).json({
-        success:true,
-        message:"Event cancelled successfully!"
-    })
-}catch(error){
-    res.status(500).json({
-        success:false,
-        message:error.message
-    })
-}
+    const { eventId } = req.params;
 
+    const registration = await Registration.findOne({
+      user: userId,
+      event: eventId
+    });
+
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: "No such registration exists!"
+      });
+    }
+
+    // Increase available seats
+    await Event.findByIdAndUpdate(
+      eventId,
+      {
+        $inc: { availableSeats: 1 }
+      },
+      {
+        new: true
+      }
+    );
+
+    // Delete the registration-user
+    await registration.deleteOne({_id:registration._id});
+
+    return res.status(200).json({
+      success: true,
+      message: "Event cancelled successfully!"
+    })
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
 }
 //4. Admin able to view all registered event with users info.
 const getAllRegisteredEvents = async(req,res)=>{
@@ -133,4 +163,5 @@ res.status(200).json({
 
 }
 
-module.exports = {registerEvent,getAllRegistration,cancelEvent,getAllRegisteredEvents}
+module.exports = {registerEvent,getAllRegistration,cancelEvent,
+    getAllRegisteredEvents}

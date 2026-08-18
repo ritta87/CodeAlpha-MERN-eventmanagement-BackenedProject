@@ -90,58 +90,98 @@ const getEventById = async(req,res)=>{
     }
 }
 //4.update event by Id,capacity and seats get updated..
-const updateEvent = async(req,res)=>{
-    try{
-    const event = await Event.findById(req.params.id)
-    const { eventTitle, description, date, venue, capacity } = req.body
+const updateEvent = async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id);
 
-    if(!event){
-       return res.status(404).json({
-        success:true,
-        message:"Event not Found!!"
-        })
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: "Event not found!"
+      });
     }
-    if (!date) {
-    return res.status(400).json({
-        success: false,
-        message: "Event date is required"
-    })
-}
 
-const eventDate = new Date(date);
+    const {
+      eventTitle,
+      description,
+      date,
+      venue,
+      capacity
+    } = req.body;
 
-if (eventDate < new Date()) {
-    return res.status(400).json({
-        success: false,
-        message: "Event date cannot be in the past"
-    })
-}
-    const registeredCount = await Registration.countDocuments({
-        event:req.params.id})
-    const newCapacity = Number(req.body.capacity)
-    if(newCapacity < registeredCount){
+    // Validate date only if date is being updated
+    if (date !== undefined) {
+      const eventDate = new Date(date);
+
+      if (isNaN(eventDate.getTime())) {
         return res.status(400).json({
-            success:false,message:`Capacity cannot be less than registered user,(${registeredCount}).`
-        })
+          success: false,
+          message: "Invalid event date"
+        });
+      }
+
+      if (eventDate < new Date()) {
+        return res.status(400).json({
+          success: false,
+          message: "Event date cannot be in the past"
+        });
+      }
+
+      event.date = eventDate;
     }
-    newAvailableSeats = newCapacity-registeredCount
-    event.eventTitle = req.body.eventTitle
-    event.description = req.body.description
-    event.venue = req.body.venue
-    event.date = req.body.date
-    event.capacity = newCapacity
-    event.availableSeats = newAvailableSeats
-    await event.save()
-    res.status(200).json({
-        success:true,
-        message:"Event updated successfully!"
+
+    // Validate capacity only if capacity is being updated
+    if (capacity !== undefined) {
+      const newCapacity = Number(capacity);
+
+      if (isNaN(newCapacity) || newCapacity < 1) {
+        return res.status(400).json({
+          success: false,
+          message: "Capacity must be a valid positive number"
+        });
+      }
+
+      const registeredCount = await Registration.countDocuments({
+        event: req.params.id
+      });
+
+      if (newCapacity < registeredCount) {
+        return res.status(400).json({
+          success: false,
+          message: `Capacity cannot be less than registered users (${registeredCount}).`
+        });
+      }
+
+      event.capacity = newCapacity;
+      event.availableSeats = newCapacity - registeredCount;
+    }
+
+    // Update only supplied fields
+    if (eventTitle !== undefined) {
+      event.eventTitle = eventTitle;
+    }
+
+    if (description !== undefined) {
+      event.description = description;
+    }
+
+    if (venue !== undefined) {
+      event.venue = venue;
+    }
+
+    await event.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Event updated successfully!"
     })
-}catch(error){
-      res.status(500).json({
-        success:false,
-        message:error.message
-        })
-}
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    })
+  }
 }
 //4 delete an event by its Id.
 const deleteEvent = async(req,res)=>{

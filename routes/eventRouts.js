@@ -7,6 +7,7 @@ const router = express.Router()
 const {createEvent,getAllEvents,
     getEventById,updateEvent,
     deleteEvent} = require('../controllers/eventController')
+const { userViewEvents } = require('../controllers/registrationController')
 router.post('/create',userAuth,adminAuth,createEvent)
 router.get('/viewEvents',getAllEvents)
 router.get('/:id',getEventById)

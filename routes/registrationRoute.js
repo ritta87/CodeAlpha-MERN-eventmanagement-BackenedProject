@@ -5,7 +5,7 @@ const adminAuth = require('../middleware/adminAuth')
 const {registerEvent,
     getAllRegistration , 
     cancelEvent,
-    getAllRegisteredEvents,
+    getAllRegisteredEvents
 }
  = require('../controllers/registrationController')
 
